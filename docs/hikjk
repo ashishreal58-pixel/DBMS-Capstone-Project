@@ -1,0 +1,23 @@
+# ER/EER Model
+
+```mermaid
+erDiagram
+ DEPARTMENTS ||--o{ EMPLOYEES : contains
+ EMPLOYEES ||--o| APP_USERS : account
+ EMPLOYEES ||--o{ ATTENDANCE : records
+ EMPLOYEES ||--o{ LEAVE_REQUESTS : requests
+ APP_USERS o|--o{ LEAVE_REQUESTS : decides
+ EMPLOYEES ||--o{ PAYROLL : receives
+ DEPARTMENTS { bigint department_id PK string department_name UK }
+ EMPLOYEES { bigint employee_id PK string employee_code UK bigint department_id FK }
+ APP_USERS { bigint user_id PK bigint employee_id FK string role }
+ ATTENDANCE { bigint attendance_id PK bigint employee_id FK date attendance_date }
+ LEAVE_REQUESTS { bigint leave_id PK bigint employee_id FK bigint approved_by FK }
+ PAYROLL { bigint payroll_id PK bigint employee_id FK date pay_month }
+```
+
+## Cardinalities
+- Department 1 : many Employees.
+- Employee 1 : 0..1 App User.
+- Employee 1 : many Attendance, Leave Requests and Payroll rows.
+- App User 1 : many approved leave requests (optional approver).
