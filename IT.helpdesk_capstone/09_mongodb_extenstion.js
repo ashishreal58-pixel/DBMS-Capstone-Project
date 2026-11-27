@@ -1,63 +1,110 @@
--- =====================================================================
--- File 08 : TEST CASES  (positive / negative / integrity / transaction / concurrency)
--- Run each statement separately; "Expected" column goes into the report table.
--- =====================================================================
-USE helpdesk_db;
+// =====================================================================
+// File 09 : CO4 NoSQL EXTENSION - MongoDB (run in mongosh or MongoDB Compass > _MONGOSH)
+//   mongosh < 09_mongodb_extension.js        (or paste block by block and screenshot)
+// WHY MongoDB?  Core ticket data (status, SLA, assignment) needs ACID + joins -> stays in MySQL.
+// Ticket *conversation/activity* is semi-structured: every ticket has different events
+// (comments, attachments, chat transcripts, remote-session logs) -> flexible documents.
+// Link between the two worlds: incident_id / ticket_no.
+// =====================================================================
+use helpdesk_nosql;
+db.incident_activity.drop();
+db.kb_articles.drop();
 
--- ---------------- POSITIVE ------------------------------------------
--- TC-P1  Create incident via procedure                       Expected: ticket INC-2026-xxxxx returned, status New, SLA row + history row created
-CALL sp_create_incident(15, 'Monitor flickers', 'Screen flickers every minute', 6, 3, @t);  SELECT @t;
--- TC-P2  Assign unassigned incident                           Expected: status Assigned, assigned_at set, history +1
--- CALL sp_assign_incident(<new id>, 1, 1);
--- TC-P3  Priority change recalculates SLA                     Expected: sla_tracking.resolution_due changes
--- UPDATE incident SET priority_id = 1 WHERE incident_id = <new id>;  SELECT * FROM sla_tracking WHERE incident_id = <new id>;
--- TC-P4  Function returns status                              Expected: ON TRACK / AT RISK / BREACHED / MET
-SELECT fn_sla_status(1), fn_sla_status(5), fn_sla_status(10);
+// ---------------- 1. CREATE (insertMany) ----------------
+db.incident_activity.insertMany([
+  { incident_id: 1, ticket_no: "INC-2026-00001", priority: "Critical", category: "Network", tags: ["vpn","outage"],
+    events: [
+      { type: "comment",    by: "agent_aarav", text: "Checking VPN gateway logs",          ts: ISODate("2026-11-10T09:05:00Z") },
+      { type: "attachment", by: "pooja.gupta14", filename: "vpn_error.png", size_kb: 245,   ts: ISODate("2026-11-10T09:07:00Z") },
+      { type: "comment",    by: "agent_aarav", text: "Gateway memory at 98%, restarting",   ts: ISODate("2026-11-10T09:20:00Z") } ] },
+  { incident_id: 2, ticket_no: "INC-2026-00002", priority: "High", category: "Hardware", tags: ["laptop","battery"],
+    events: [
+      { type: "comment", by: "agent_priya", text: "Battery health 41%", ts: ISODate("2026-11-09T11:00:00Z") },
+      { type: "remote_session", by: "agent_priya", duration_min: 18, tool: "AnyDesk", ts: ISODate("2026-11-09T11:30:00Z") } ] },
+  { incident_id: 3, ticket_no: "INC-2026-00003", priority: "Medium", category: "Software", tags: ["erp","timeout"],
+    events: [
+      { type: "chat", by: "user", transcript: ["ERP is slow", "Which report?", "Month-end sales"], ts: ISODate("2026-11-08T14:00:00Z") },
+      { type: "comment", by: "agent_karan", text: "Linked to Problem #5", ts: ISODate("2026-11-08T14:10:00Z") },
+      { type: "attachment", by: "agent_karan", filename: "slow_query.sql", size_kb: 4, ts: ISODate("2026-11-08T14:12:00Z") } ] },
+  { incident_id: 4, ticket_no: "INC-2026-00004", priority: "Low", category: "Access", tags: ["password"],
+    events: [ { type: "comment", by: "agent_meera", text: "Password reset link sent", ts: ISODate("2026-11-07T10:00:00Z") } ] },
+  { incident_id: 5, ticket_no: "INC-2026-00005", priority: "High", category: "Network", tags: ["wifi","floor3"],
+    events: [
+      { type: "comment", by: "agent_arjun", text: "AP-3F-02 rebooting", ts: ISODate("2026-11-06T08:00:00Z") },
+      { type: "comment", by: "agent_arjun", text: "Firmware upgrade scheduled", ts: ISODate("2026-11-06T08:30:00Z") } ] },
+  { incident_id: 6, ticket_no: "INC-2026-00006", priority: "Critical", category: "Security", tags: ["phishing","email"],
+    events: [
+      { type: "comment", by: "agent_diya", text: "Sender domain blocked", ts: ISODate("2026-11-05T07:00:00Z") },
+      { type: "attachment", by: "pooja.gupta14", filename: "phish.eml", size_kb: 33, ts: ISODate("2026-11-05T06:50:00Z") } ] }
+]);
 
--- ---------------- NEGATIVE / INTEGRITY ------------------------------
--- TC-N1  Invalid FK (priority 9)                              Expected: ERROR 1452 foreign key fails
-INSERT INTO incident (ticket_no,title,reporter_id,category_id,priority_id,team_id) VALUES ('X-1','t',14,6,9,1);
--- TC-N2  Duplicate ticket number                              Expected: ERROR 1062 duplicate entry
-INSERT INTO incident (ticket_no,title,reporter_id,category_id,priority_id,team_id) VALUES ('INC-2026-00001','t',14,6,1,1);
--- TC-N3  CHECK: rating out of range                           Expected: ERROR 3819 check constraint chk_rating violated
-INSERT INTO feedback (incident_id, rating) VALUES (1, 6);
--- TC-N4  CHECK: resolved before created                       Expected: ERROR 3819 chk_inc_resolved
-UPDATE incident SET resolved_at = '2000-01-01 00:00:00' WHERE incident_id = 1;
--- TC-N5  Bad e-mail format                                    Expected: ERROR 3819 chk_email
-INSERT INTO app_user (full_name,email,dept_id,role_id) VALUES ('Bad Mail','bademail',1,1);
--- TC-N6  Duplicate e-mail                                     Expected: ERROR 1062
-INSERT INTO app_user (full_name,email,dept_id,role_id) VALUES ('Dup','aarav.singh1@corp.example',1,1);
--- TC-N7  Delete a referenced parent row                       Expected: ERROR 1451 cannot delete parent row
-DELETE FROM department WHERE dept_id = 1;
--- TC-N8  SLA with resolution <= response                      Expected: ERROR 3819 chk_sla_times
-INSERT INTO sla (sla_name, priority_id, response_minutes, resolution_minutes) VALUES ('bad', 1, 60, 30);
+db.kb_articles.insertMany([
+  { kb_id: "KB-001", title: "Fix VPN disconnects",            tags: ["vpn"],      steps: ["Update client","Restart gateway","Check MTU"], helpful_votes: 42 },
+  { kb_id: "KB-002", title: "Replace swollen laptop battery", tags: ["battery"],  steps: ["Power off","Remove battery","Raise asset replacement"], helpful_votes: 17 },
+  { kb_id: "KB-003", title: "Reset a locked account",         tags: ["password"], steps: ["Verify identity","Unlock in AD","Force reset"], helpful_votes: 65 }
+]);
 
--- ---------------- BUSINESS-RULE (TRIGGER) ---------------------------
--- TC-B1  Close an incident that is not Resolved               Expected: ERROR 1644 'Incident can be closed only after it is Resolved'
-UPDATE incident SET status_id = 6 WHERE status_id IN (2,3) LIMIT 1;
--- TC-B2  Modify a Closed incident                             Expected: ERROR 1644 'Closed incident cannot be modified'
-UPDATE incident SET title = 'hack' WHERE status_id = 6 LIMIT 1;
--- TC-B3  Feedback before resolution                           Expected: ERROR 1644 'Feedback allowed only after the incident is resolved'
-INSERT INTO feedback (incident_id, rating) VALUES ((SELECT MAX(incident_id) FROM incident WHERE status_id = 1), 5);
--- TC-B4  Resolve by a non-assigned technician                 Expected: ERROR 1644 'Only the assigned technician can resolve...'
--- CALL sp_resolve_incident(<assigned id>, <other tech>, 'x', 'Fixed', 1);
--- TC-B5  Duplicate escalation level                           Expected: ERROR 1062 uq_esc_level
--- INSERT INTO escalation(incident_id,escalated_from_team,escalated_to_team,reason,escalation_level) VALUES (<id with L1>,1,5,'dup',1);
+// ---------------- 2. READ ----------------
+db.incident_activity.find({ priority: "Critical" }, { _id: 0, ticket_no: 1, category: 1 });
+db.incident_activity.find({ "events.type": "attachment" }, { _id: 0, ticket_no: 1 });
+db.incident_activity.find({ tags: { $in: ["vpn", "wifi"] } }).count();
 
--- ---------------- TRANSACTION ---------------------------------------
--- TC-T1  Failure inside transaction rolls back all changes    See 06 Scenario 2  (history count unchanged)
--- TC-T2  SAVEPOINT undo keeps assignment                      See 06 Scenario 3 / 5
--- TC-T3  Procedure failure leaves no partial rows             CALL sp_assign_incident(9001, 99, 1); SELECT COUNT(*) FROM incident_history WHERE incident_id = 9001;
+// ---------------- 3. UPDATE ----------------
+db.incident_activity.updateOne({ incident_id: 1 },
+  { $push: { events: { type: "comment", by: "agent_aarav", text: "Issue resolved after gateway restart", ts: new Date() } },
+    $addToSet: { tags: "resolved" } });
+db.incident_activity.updateMany({ priority: "Low" }, { $set: { reviewed: true } });
+db.incident_activity.findOne({ incident_id: 1 });
 
--- ---------------- CONCURRENCY ---------------------------------------
--- TC-C1  Two agents assign same ticket (FOR UPDATE)           See 06 Part B2: exactly one assignment, second gets ERROR 1644
--- TC-C2  Lost update prevented by conditional UPDATE          See 06 Part B3: affected rows 1 vs 0
--- TC-C3  Deadlock detected & victim rolled back               See 06 Part B6: ERROR 1213
--- TC-C4  Consistency check after concurrency
-SELECT incident_id, COUNT(*) AS assignment_rows FROM incident_history
-WHERE new_tech_id IS NOT NULL AND old_tech_id IS NULL AND incident_id = 9010 GROUP BY incident_id;   -- must be <= 1
+// ---------------- 4. DELETE ----------------
+db.incident_activity.deleteOne({ incident_id: 4 });
+db.incident_activity.countDocuments();     // 5
 
--- ---------------- SECURITY ------------------------------------------
--- TC-S1  End user reading base table                          07 test: ERROR 1142
--- TC-S2  SQL injection string against prepared statement      07 section 6.3: 0 rows
--- TC-S3  Agent tries DROP / DELETE                            07 test: ERROR 1142
+// ---------------- 5. INDEXES ----------------
+db.incident_activity.createIndex({ incident_id: 1 }, { unique: true });
+db.incident_activity.createIndex({ tags: 1 });                    // multikey index
+db.incident_activity.createIndex({ priority: 1, category: 1 });   // compound
+db.incident_activity.getIndexes();
+db.incident_activity.find({ incident_id: 3 }).explain("executionStats").executionStats.totalDocsExamined;  // 1 (index used)
+
+// ---------------- 6. AGGREGATION PIPELINES ----------------
+// 6.1 events per type (flatten the array)
+db.incident_activity.aggregate([
+  { $unwind: "$events" },
+  { $group: { _id: "$events.type", total: { $sum: 1 } } },
+  { $sort: { total: -1 } }
+]);
+
+// 6.2 average number of events per priority
+db.incident_activity.aggregate([
+  { $project: { priority: 1, n_events: { $size: "$events" } } },
+  { $group: { _id: "$priority", avg_events: { $avg: "$n_events" }, tickets: { $sum: 1 } } },
+  { $sort: { avg_events: -1 } }
+]);
+
+// 6.3 most common tags
+db.incident_activity.aggregate([
+  { $unwind: "$tags" },
+  { $group: { _id: "$tags", count: { $sum: 1 } } },
+  { $sort: { count: -1 } }, { $limit: 5 }
+]);
+
+// 6.4 total attachment size per ticket
+db.incident_activity.aggregate([
+  { $unwind: "$events" },
+  { $match: { "events.type": "attachment" } },
+  { $group: { _id: "$ticket_no", total_kb: { $sum: "$events.size_kb" }, files: { $push: "$events.filename" } } }
+]);
+
+// 6.5 $lookup (join): suggest knowledge-base articles for each ticket by matching tags
+db.incident_activity.aggregate([
+  { $lookup: { from: "kb_articles", localField: "tags", foreignField: "tags", as: "suggested_kb" } },
+  { $match: { "suggested_kb.0": { $exists: true } } },
+  { $project: { _id: 0, ticket_no: 1, suggested: "$suggested_kb.title" } }
+]);
+
+// ---------------- 7. SQL vs NoSQL comparison (put in report) ----------------
+// MySQL  : incident, SLA, assignment, escalation  -> ACID, FK, CHECK, triggers, complex joins/analytics
+// MongoDB: activity feed, chat/remote-session logs, attachments metadata, KB docs -> schema-less, nested arrays,
+//          fast append ($push), no joins needed for display, horizontal scaling (sharding) for big logs.
+// Optional cloud: MongoDB Atlas free tier (M0) -> replace connection string; or MySQL on AWS RDS / Azure / Aiven.
