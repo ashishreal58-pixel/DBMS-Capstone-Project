@@ -1,57 +1,148 @@
-# DBMS-Capstone-Project
+IT Helpdesk & Incident Management System
 
-# IT Helpdesk & Incident Management DB — How to run + Screenshot checklist
+DBMS Capstone Project
 
-## Setup
-1. Install **MySQL 8.0.31+** (INTERSECT/EXCEPT need 8.0.31) and MySQL Workbench. Optional: MongoDB + Compass, Python 3 (`pip install flask pymysql pymongo`).
-2. In Workbench open each file (File → Open SQL Script) and run **in this order**:
+Project Overview
 
-| Order | File | What it does |
-|---|---|---|
-| 1 | `01_schema.sql` | Creates `helpdesk_db`, 22 tables |
-| 2 | `02_data.sql` | Loads 724 rows (re-generate with `python3 generate_data.py > 02_data.sql`) |
-| 3 | `03_views_indexes.sql` | 4 views, 20k-row index demo, EXPLAIN before/after, 6 indexes |
-| 4 | `04_triggers_procs_functions.sql` | 4 triggers, 6 procedures, 2 functions |
-| 5 | `05_queries.sql` | 18+ complex queries |
-| 6 | `06_transactions_concurrency.sql` | Transactions + two-session demo |
-| 7 | `07_rbac_security.sql` | Roles, users, injection demo |
-| 8 | `08_test_cases.sql` | Positive/negative/integrity tests |
-| 9 | `09_mongodb_extension.js` | MongoDB CRUD + aggregation |
-| 10 | `10_app.py`, `11_sqli_demo.py` | Flask app + SQL injection demo |
+The IT Helpdesk & Incident Management System is a database-driven web application designed to manage IT support requests, incidents, ticket assignments, service-level agreements (SLAs), and support activities.
 
-Tips: if `DELIMITER` causes trouble, run the file with *Execute script (⚡)*. Statements that are **meant to fail** must be run one by one (Ctrl+Enter). If you hit error 1418 on functions: `SET GLOBAL log_bin_trust_function_creators = 1;`.
+The project demonstrates the practical implementation of Database Management System concepts using MySQL, MongoDB, Python, and Flask.
 
-## Screenshot checklist (name files as shown, paste in report in this order)
-| # | Screenshot | From |
-|---|---|---|
-| 1 | EER diagram (Database → Reverse Engineer) | after 01 |
-| 2 | `SHOW TABLES` (22 tables) + row-count query | 01/02 |
-| 3–20 | One per query Q1…Q18 (query + result grid) | 05 |
-| 21 | 4 views output | 03 |
-| 22 | EXPLAIN **before** indexes (type=ALL) | 03 (A) |
-| 23 | EXPLAIN **after** indexes (type=ref/range) + `SHOW INDEX` | 03 (C) |
-| 24 | Trigger creation + `SHOW TRIGGERS` | 04 |
-| 25 | `sp_create_incident` → history + SLA rows + audit_log | 04 smoke test |
-| 26 | `fn_sla_status` output | 04 |
-| 27 | Transaction Scenario 1 COMMIT | 06 A1 |
-| 28 | Scenario 2 error + ROLLBACK + unchanged row | 06 A2 |
-| 29 | Scenario 3 SAVEPOINT (before / after rollback to savepoint) | 06 A3 |
-| 30 | Scenario 4 auto-escalation | 06 A4 |
-| 31 | Scenario 5 failed escalation but assignment kept | 06 A5 |
-| 32 | Cursor SLA monitor result | 06 A7 |
-| 33 | **Session A + Session B side by side**: B blocked on FOR UPDATE | 06 B2 |
-| 34 | Session B after A commits → "already assigned" error | 06 B2 |
-| 35 | Lost update (without lock) vs conditional update (1 vs 0 rows) | 06 B1/B3 |
-| 36 | Deadlock ERROR 1213 + `SHOW ENGINE INNODB STATUS` | 06 B6 |
-| 37 | `SHOW GRANTS` for 4 roles | 07 |
-| 38 | End user: `SELECT * FROM incident` → ERROR 1142, `v_my_incidents` OK | 07 tests |
-| 39 | Agent: DELETE/DROP denied | 07 tests |
-| 40 | SQL injection succeeds (vulnerable) vs 0 rows (prepared) | 07 §6 or `11_sqli_demo.py` |
-| 41 | Test-case outputs (constraint errors) | 08 |
-| 42 | MongoDB: insert / find / update / delete | 09 |
-| 43 | MongoDB: aggregation pipelines + `$lookup` | 09 |
-| 44 | Flask app: open tickets, create ticket, assign, SLA page, Mongo activity | 10 |
-| 45 | (Optional) MongoDB Atlas / cloud MySQL connection | — |
+Objectives
 
-## Report outline (final report + PPT)
-1 Problem & objectives · 2 Requirements & business rules · 3 ER/EER · 4 Schema & data dictionary · 5 FDs & normalization · 6 SQL queries (+screens) · 7 Views/indexes/EXPLAIN · 8 Triggers/procedures/functions · 9 Transactions & concurrency · 10 RBAC & injection · 11 MongoDB/NoSQL + SQL-vs-NoSQL justification · 12 Application · 13 Test cases · 14 Conclusion. (Content for 2–5 is already in `00_design_document.md`.)
+- Design and implement a relational database.
+- Develop an ER/EER diagram and relational schema.
+- Apply functional dependencies and normalization.
+- Implement complex SQL queries.
+- Use stored procedures, functions, and triggers.
+- Demonstrate transaction management and concurrency control.
+- Implement role-based access control and database security.
+- Integrate MongoDB for NoSQL operations.
+- Develop a web-based application using Flask.
+
+Key Features
+
+- User and role management.
+- IT incident and ticket management.
+- Ticket assignment and tracking.
+- SLA monitoring.
+- Incident status management.
+- Activity and audit logging.
+- Advanced SQL operations.
+- Database security and access control.
+- MongoDB integration.
+- Flask-based web interface.
+
+Technologies Used
+
+Technology| Purpose
+MySQL| Relational database
+MongoDB| NoSQL database
+Python| Backend programming
+Flask| Web framework
+HTML/CSS| Frontend
+PyMySQL| MySQL connectivity
+PyMongo| MongoDB connectivity
+GitHub| Version control
+
+Project Structure
+
+DBMS-Capstone-Project/
+│
+├── README.md
+│
+└── IT.helpdesk_capstone/
+    ├── README.md
+    ├── 00_design_document.md
+    ├── 01_schema.sql
+    ├── 02_data.sql
+    ├── 03_views_indexes.sql
+    ├── 04_triggers_procs_functions.sql
+    ├── 05_queries.sql
+    ├── 06_transactions_concurrency.sql
+    ├── 07_rbac_security.sql
+    ├── 08_test_cases.sql
+    ├── 09_mongodb_extension.js
+    ├── 10_app.py
+    ├── 11_sqli_demo.py
+    └── generate_data.py
+
+DBMS Concepts Implemented
+
+- Database design and normalization.
+- Primary keys and foreign keys.
+- Constraints and referential integrity.
+- Joins, subqueries, and aggregate functions.
+- Views and indexes.
+- Stored procedures and functions.
+- Triggers.
+- Query optimization using EXPLAIN.
+- ACID properties and transactions.
+- Concurrency control and locking.
+- Role-based access control.
+- SQL injection prevention.
+- MongoDB CRUD and aggregation.
+
+Installation and Execution
+
+1. Clone Repository
+
+git clone https://github.com/ashishreal58-pixel/DBMS-Capstone-Project.git
+
+2. Install Dependencies
+
+pip install flask pymysql pymongo
+
+3. Configure MySQL
+
+Start MySQL Server and execute the SQL scripts in the following order:
+
+1. "01_schema.sql"
+2. "02_data.sql"
+3. "03_views_indexes.sql"
+4. "04_triggers_procs_functions.sql"
+5. "05_queries.sql"
+6. "06_transactions_concurrency.sql"
+7. "07_rbac_security.sql"
+8. "08_test_cases.sql"
+
+4. Configure MongoDB
+
+Start MongoDB and execute:
+
+mongosh 09_mongodb_extension.js
+
+5. Run Application
+
+python 10_app.py
+
+Open your browser:
+
+http://127.0.0.1:5000
+
+Note: Run commands from the project directory, configure database credentials, and adjust script paths if necessary.
+
+Expected Deliverables
+
+- Requirements and business rules.
+- ER/EER diagram and relational schema.
+- Functional dependencies and normalization.
+- SQL scripts and realistic dataset.
+- Complex SQL query set.
+- Views, indexes, and query optimization.
+- Stored procedures, functions, and triggers.
+- Transaction and concurrency demonstrations.
+- Database security and RBAC.
+- MongoDB integration.
+- Web application.
+- Testing and documentation.
+
+Conclusion
+
+The IT Helpdesk & Incident Management System demonstrates the practical application of database management concepts in a real-world IT support environment. It combines relational database management, NoSQL integration, advanced SQL programming, security, and web development.
+
+Repository
+
+GitHub: https://github.com/ashishreal58-pixel/DBMS-Capstone-Project
+
+Project Type: DBMS Capstone Project
