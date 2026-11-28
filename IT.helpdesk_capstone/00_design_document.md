@@ -163,5 +163,3 @@ Every determinant in the final schema is a candidate key — e.g. `technician`: 
 | RBAC | end user / agent / manager / admin |
 | MongoDB | flexible activity feed, attachments metadata, KB |
 
-## 9. Technology stack
-MySQL 8 + Workbench · MongoDB 7 + Compass/mongosh · Python 3 + Flask + PyMySQL + PyMongo.
