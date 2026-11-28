@@ -1,5 +1,5 @@
-# IT Helpdesk & Incident Management Database — Design Document
-**Course:** Database Management Systems (ETCCMS304) · **RDBMS:** MySQL 8.0.31+ · **NoSQL:** MongoDB
+# IT Helpdesk & Incident Management Database 
+**Course:** Database Management Systems (ETCCMS304) · **RDBMS:** MySQL + · **NoSQL:** MongoDB
 
 ---
 ## 1. Problem statement & scope
