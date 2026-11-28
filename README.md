@@ -141,8 +141,3 @@ Conclusion
 
 The IT Helpdesk & Incident Management System demonstrates the practical application of database management concepts in a real-world IT support environment. It combines relational database management, NoSQL integration, advanced SQL programming, security, and web development.
 
-Repository
-
-GitHub: https://github.com/ashishreal58-pixel/DBMS-Capstone-Project
-
-Project Type: DBMS Capstone Project
